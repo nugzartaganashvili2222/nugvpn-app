@@ -50,6 +50,11 @@
   .ring .lbl{font-size:10.5px;color:var(--muted);letter-spacing:.24em;text-transform:uppercase}
   .ring .ok{margin-top:4px;font-size:12.5px;color:var(--ok);display:flex;align-items:center;gap:6px}
   .ring .ok::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px var(--ok)}
+  .ring .asleep{font-size:46px;line-height:.9;color:#aab6ff;text-shadow:0 0 22px rgba(110,139,255,.9);animation:breathe 3.4s ease-in-out infinite}
+  .ring .off-lbl{margin-top:4px;font-size:12.5px;color:#e3b86a;display:flex;align-items:center;gap:6px}
+  .ring .off-lbl::before{content:"";width:7px;height:7px;border-radius:50%;background:#e3b86a;box-shadow:0 0 10px #e3b86a}
+  @keyframes breathe{0%,100%{transform:scale(1);opacity:.7}50%{transform:scale(1.14);opacity:1}}
+  #arc{transition:stroke-dasharray 1.4s cubic-bezier(.22,1,.36,1)}
   .chips{display:flex;gap:8px;margin-top:22px;flex-wrap:wrap;justify-content:center}
   .chip{background:var(--glass);border:1px solid var(--glass-line);border-radius:999px;padding:7px 13px;font-size:12.5px}
   .chip span{color:var(--muted)}
@@ -131,7 +136,8 @@
   }
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   @media (prefers-reduced-motion:reduce){
-    .btn,.toast,.nav button{transition:none}
+    .btn,.toast,.nav button,#arc{transition:none}
+    .ring .asleep{animation:none}
   }
 </style>
 </head>
@@ -164,23 +170,33 @@
             </linearGradient>
           </defs>
           <circle cx="108" cy="108" r="98" fill="none" stroke="rgba(146,160,230,.16)" stroke-width="10"/>
-          <circle cx="108" cy="108" r="98" fill="none" stroke="url(#ringg)" stroke-width="10"
-                  stroke-linecap="round" stroke-dasharray="205 615.7"/>
+          <circle id="arc" cx="108" cy="108" r="98" fill="none" stroke="url(#ringg)" stroke-width="10"
+                  stroke-linecap="round" stroke-dasharray="0 615.7"/>
         </svg>
-        <div class="mid">
-          <div class="days">30</div>
-          <div class="lbl">дней осталось</div>
+        <div class="mid" id="mid-off">
+          <div class="asleep">✦</div>
+          <div class="lbl">твоя звезда спит</div>
+          <div class="off-lbl">защита выключена</div>
+        </div>
+        <div class="mid" id="mid-on" style="display:none">
+          <div class="days">3</div>
+          <div class="lbl">дня осталось</div>
           <div class="ok">защита активна</div>
         </div>
       </div>
-      <div class="chips">
-        <span class="chip">до 10 ноя 2026</span>
-        <span class="chip"><span>трафик</span> 1.2 ГБ</span>
-        <span class="chip"><span>устройств</span> 3</span>
+      <div class="chips" id="chips-off">
+        <span class="chip">🎁 <span>в подарок</span> 3 дня</span>
+        <span class="chip"><span>трафик</span> безлимит</span>
+        <span class="chip"><span>протокол</span> VLESS/Reality</span>
+      </div>
+      <div class="chips" id="chips-on" style="display:none">
+        <span class="chip" id="chipUntil">до —</span>
+        <span class="chip"><span>трафик</span> безлимит</span>
+        <span class="chip"><span>устройств</span> до 3</span>
       </div>
     </div>
-    <button class="btn primary" data-go="s-plans"><span>Продлить подписку</span><span>от 149 ₽</span></button>
-    <button class="btn ghost" data-go="s-setup"><span>Подключить устройство</span><span>→</span></button>
+    <button class="btn primary" id="igniteBtn"><span>🌠 Зажечь звезду</span><span>3 дня бесплатно</span></button>
+    <button class="btn ghost" data-go="s-plans" id="homeGhost"><span>Тарифы</span><span>от 149 ₽</span></button>
   </section>
 
   <!-- ТАРИФЫ -->
@@ -211,9 +227,8 @@
   <section class="screen" id="s-profile">
     <div class="sc-title">Профиль</div>
     <div class="sc-sub" id="profileSub">гость</div>
-    <div class="prow"><span class="ic">◷</span><div><b>Подписка активна</b><span>до 10 ноября 2026 · осталось 30 дней</span></div></div>
-    <div class="prow"><span class="ic">⇅</span><div><b>Трафик</b><span>1.2 ГБ за месяц · безлимит</span></div></div>
-    <div class="prow"><span class="ic">▣</span><div><b>Устройства</b><span>iPhone, Windows, Android TV</span></div></div>
+    <div class="prow"><span class="ic">◷</span><div><b>Подписки пока нет</b><span>зажги звезду на главной — 3 дня бесплатно</span></div></div>
+    <div class="prow"><span class="ic">▣</span><div><b>Устройства</b><span>до 3 одновременно</span></div></div>
     <div class="prow"><span class="ic">✦</span><div><b>Пригласить друга</b><span>+7 дней вам и другу</span></div></div>
     <div class="prow"><span class="ic">✉</span><div><b>Поддержка</b><span>@nugvpn_support · отвечаем быстро</span></div></div>
   </section>
@@ -278,6 +293,26 @@
     pop.t = setTimeout(() => toast.classList.remove('show'), 1800);
   }
   document.getElementById('payBtn').addEventListener('click', () => pop('Оплата скоро заработает'));
+
+  // демо: «подписки нет» → зажигание звезды (пробный период)
+  const igniteBtn = document.getElementById('igniteBtn');
+  const homeGhost = document.getElementById('homeGhost');
+  igniteBtn.addEventListener('click', () => {
+    if (igniteBtn.dataset.lit){ show('s-plans'); return; }
+    igniteBtn.dataset.lit = '1';
+    document.getElementById('mid-off').style.display = 'none';
+    document.getElementById('mid-on').style.display = '';
+    document.getElementById('chips-off').style.display = 'none';
+    document.getElementById('chips-on').style.display = '';
+    document.getElementById('arc').setAttribute('stroke-dasharray', '61.6 615.7');
+    const until = new Date(Date.now() + 3 * 864e5);
+    document.getElementById('chipUntil').textContent =
+      'до ' + until.toLocaleDateString('ru-RU', {day:'numeric', month:'short'});
+    igniteBtn.innerHTML = '<span>Продлить подписку</span><span>от 149 ₽</span>';
+    homeGhost.innerHTML = '<span>Подключить устройство</span><span>→</span>';
+    homeGhost.dataset.go = 's-setup';
+    pop('🌠 Звезда зажжена — 3 дня защиты!');
+  });
   document.getElementById('copyBtn').addEventListener('click', async () => {
     const text = document.getElementById('subLink').textContent.trim();
     try { await navigator.clipboard.writeText(text); pop('Скопировано'); }
