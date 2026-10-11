@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NugVPN</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root{
+    --app-top:#171e3e;
+    --app-bot:#0a0d1c;
+    --ink:#eef1fc;
+    --muted:#8b91b5;
+    --aur-1:#6e8bff;
+    --aur-2:#5ae3cf;
+    --glass:rgba(146,160,230,.10);
+    --glass-line:rgba(146,160,230,.22);
+    --card:#121732;
+    --ok:#5ae3a0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--app-bot);color:var(--ink);
+    font-family:"Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+    overflow:hidden;
+  }
+  .app{
+    position:relative;height:100dvh;max-width:520px;margin:0 auto;overflow:hidden;
+    background:linear-gradient(180deg,var(--app-top) 0%,var(--app-bot) 58%);
+  }
+  .sky{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .screen{
+    position:absolute;inset:0;display:none;flex-direction:column;
+    padding:calc(20px + env(safe-area-inset-top)) 22px calc(96px + env(safe-area-inset-bottom));
+  }
+  .screen.on{display:flex}
+
+  .brand{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}
+  .brand .mark{font-size:16px;font-weight:700;letter-spacing:.02em}
+  .brand .mark i{font-style:normal;background:linear-gradient(90deg,var(--aur-1),var(--aur-2));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .brand .tag{font-size:10.5px;color:var(--muted);letter-spacing:.22em;text-transform:uppercase}
+
+  .ringbox{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .ring{position:relative;width:216px;height:216px}
+  .ring svg{transform:rotate(-90deg)}
+  .ring .mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px}
+  .ring .days{font-size:56px;font-weight:200;letter-spacing:-.03em;line-height:.9;font-variant-numeric:tabular-nums}
+  .ring .lbl{font-size:10.5px;color:var(--muted);letter-spacing:.24em;text-transform:uppercase}
+  .ring .ok{margin-top:4px;font-size:12.5px;color:var(--ok);display:flex;align-items:center;gap:6px}
+  .ring .ok::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px var(--ok)}
+  .chips{display:flex;gap:8px;margin-top:22px;flex-wrap:wrap;justify-content:center}
+  .chip{background:var(--glass);border:1px solid var(--glass-line);border-radius:999px;padding:7px 13px;font-size:12.5px}
+  .chip span{color:var(--muted)}
+
+  .btn{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    border-radius:13px;padding:15px 18px;font-size:15px;font-weight:600;
+    cursor:pointer;border:none;width:100%;font-family:inherit;color:var(--ink);
+    transition:transform .12s, filter .15s;
+  }
+  .btn:hover{filter:brightness(1.1)}
+  .btn:active{transform:scale(.985)}
+  .btn:focus-visible{outline:2px solid var(--aur-2);outline-offset:2px}
+  .btn.primary{
+    background:linear-gradient(90deg,var(--aur-1),var(--aur-2));
+    color:#0a1026;margin-top:20px;
+    box-shadow:0 8px 28px -10px rgba(110,139,255,.55);
+  }
+  .btn.ghost{background:var(--glass);border:1px solid var(--glass-line);margin-top:10px}
+  .btn.center{justify-content:center}
+
+  .nav{
+    position:absolute;left:14px;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));
+    display:flex;background:rgba(10,13,28,.72);
+    border:1px solid var(--glass-line);border-radius:14px;padding:5px;
+    backdrop-filter:blur(6px);
+  }
+  .nav button{
+    flex:1;border:none;background:transparent;border-radius:10px;
+    padding:9px 0 7px;color:var(--muted);cursor:pointer;font-family:inherit;
+    font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    transition:color .15s, background .15s;
+  }
+  .nav button svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .nav button:hover{color:var(--ink)}
+  .nav button:focus-visible{outline:2px solid var(--aur-2);outline-offset:-2px}
+  .nav button.act{color:#0a1026;background:linear-gradient(90deg,var(--aur-1),var(--aur-2))}
+
+  .sc-title{font-size:20px;font-weight:700;margin:10px 0 4px}
+  .sc-sub{color:var(--muted);font-size:13.5px;margin-bottom:16px}
+  .plan{
+    background:var(--card);border:1px solid var(--glass-line);border-radius:13px;
+    padding:14px 16px;margin-bottom:10px;cursor:pointer;
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .plan:hover{border-color:var(--aur-1)}
+  .plan.pick{border-color:var(--aur-2);box-shadow:0 0 0 1px var(--aur-2), 0 8px 24px -12px rgba(90,227,207,.4)}
+  .plan b{font-size:15px}
+  .plan .per{color:var(--muted);font-size:12.5px;margin-top:2px}
+  .plan .cost{font-size:16px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .plan .save{display:inline-block;background:linear-gradient(90deg,var(--aur-1),var(--aur-2));color:#0a1026;border-radius:6px;font-size:11px;font-weight:700;padding:2px 7px;margin-left:7px;vertical-align:1px}
+  .steps{display:flex;flex-direction:column;gap:12px}
+  .step{display:flex;gap:12px;align-items:flex-start}
+  .step .no{
+    flex:none;width:26px;height:26px;border-radius:50%;
+    border:1.5px solid var(--aur-2);color:var(--aur-2);
+    font-weight:700;font-size:13px;display:grid;place-items:center;
+  }
+  .step p{font-size:13.5px;line-height:1.5}
+  .step p span{color:var(--muted)}
+  .linkline{
+    background:rgba(0,0,0,.35);border:1px dashed var(--glass-line);border-radius:10px;
+    padding:10px 12px;font-family:Consolas,monospace;font-size:12px;color:var(--aur-2);
+    word-break:break-all;margin:14px 0 4px;
+  }
+  .prow{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--glass-line);border-radius:13px;padding:13px 16px;margin-bottom:10px;cursor:pointer;transition:border-color .15s}
+  .prow:hover{border-color:var(--aur-1)}
+  .prow .ic{flex:none;width:34px;height:34px;border-radius:10px;background:var(--glass);display:grid;place-items:center;font-size:16px}
+  .prow div b{display:block;font-size:14px}
+  .prow div span{font-size:12.5px;color:var(--muted)}
+  .toast{
+    position:absolute;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));
+    transform:translateX(-50%) translateY(16px);
+    background:#10172e;border:1px solid var(--aur-2);color:var(--ink);
+    border-radius:12px;padding:10px 18px;font-size:13.5px;opacity:0;pointer-events:none;
+    transition:opacity .25s, transform .25s;white-space:nowrap;z-index:5;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  @media (prefers-reduced-motion:reduce){
+    .btn,.toast,.nav button{transition:none}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <svg class="sky" viewBox="0 0 390 660" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <defs>
+      <linearGradient id="aur" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#6e8bff" stop-opacity="0"/>
+        <stop offset=".5" stop-color="#6e8bff" stop-opacity=".35"/>
+        <stop offset="1" stop-color="#5ae3cf" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <path d="M-20 120 C 90 60, 280 170, 410 90" stroke="url(#aur)" stroke-width="70" fill="none" opacity=".5"/>
+  </svg>
+  <canvas class="sky" id="stars" aria-hidden="true"></canvas>
+
+  <!-- ГЛАВНАЯ -->
+  <section class="screen on" id="s-home">
+    <div class="brand">
+      <span class="mark">Nug<i>VPN</i></span>
+      <span class="tag">интернет без границ</span>
+    </div>
+    <div class="ringbox">
+      <div class="ring">
+        <svg width="216" height="216" viewBox="0 0 216 216">
+          <defs>
+            <linearGradient id="ringg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#6e8bff"/><stop offset="1" stop-color="#5ae3cf"/>
+            </linearGradient>
+          </defs>
+          <circle cx="108" cy="108" r="98" fill="none" stroke="rgba(146,160,230,.16)" stroke-width="10"/>
+          <circle cx="108" cy="108" r="98" fill="none" stroke="url(#ringg)" stroke-width="10"
+                  stroke-linecap="round" stroke-dasharray="205 615.7"/>
+        </svg>
+        <div class="mid">
+          <div class="days">30</div>
+          <div class="lbl">дней осталось</div>
+          <div class="ok">защита активна</div>
+        </div>
+      </div>
+      <div class="chips">
+        <span class="chip">до 10 ноя 2026</span>
+        <span class="chip"><span>трафик</span> 1.2 ГБ</span>
+        <span class="chip"><span>устройств</span> 3</span>
+      </div>
+    </div>
+    <button class="btn primary" data-go="s-plans"><span>Продлить подписку</span><span>от 149 ₽</span></button>
+    <button class="btn ghost" data-go="s-setup"><span>Подключить устройство</span><span>→</span></button>
+  </section>
+
+  <!-- ТАРИФЫ -->
+  <section class="screen" id="s-plans">
+    <div class="sc-title">Продление</div>
+    <div class="sc-sub">Чем дольше срок — тем дешевле месяц</div>
+    <div class="plan" data-plan><div><b>1 месяц</b><div class="per">149 ₽ / мес</div></div><div class="cost">149 ₽</div></div>
+    <div class="plan pick" data-plan><div><b>3 месяца<span class="save">−11%</span></b><div class="per">133 ₽ / мес</div></div><div class="cost">399 ₽</div></div>
+    <div class="plan" data-plan><div><b>6 месяцев<span class="save">−22%</span></b><div class="per">116 ₽ / мес</div></div><div class="cost">699 ₽</div></div>
+    <button class="btn primary" id="payBtn"><span>Оплатить</span><span id="payPrice">399 ₽</span></button>
+  </section>
+
+  <!-- ПОДКЛЮЧЕНИЕ -->
+  <section class="screen" id="s-setup">
+    <div class="sc-title">Подключение</div>
+    <div class="sc-sub">Через приложение Happ — пара минут</div>
+    <div class="steps">
+      <div class="step"><span class="no">1</span><p>Установите <b>Happ</b> <span>— App Store, Google Play или happ.su</span></p></div>
+      <div class="step"><span class="no">2</span><p>Скопируйте вашу ссылку-подписку кнопкой ниже</p></div>
+      <div class="step"><span class="no">3</span><p>В Happ: <b>«+» → Вставить из буфера</b></p></div>
+      <div class="step"><span class="no">4</span><p>Выберите сервер — и вы в сети</p></div>
+    </div>
+    <div class="linkline" id="subLink">https://sub.nugvpn.com/sub/7f3a9c1e-42b8</div>
+    <button class="btn primary center" id="copyBtn"><span>Скопировать ссылку</span></button>
+  </section>
+
+  <!-- ПРОФИЛЬ -->
+  <section class="screen" id="s-profile">
+    <div class="sc-title">Профиль</div>
+    <div class="sc-sub" id="profileSub">гость</div>
+    <div class="prow"><span class="ic">◷</span><div><b>Подписка активна</b><span>до 10 ноября 2026 · осталось 30 дней</span></div></div>
+    <div class="prow"><span class="ic">⇅</span><div><b>Трафик</b><span>1.2 ГБ за месяц · безлимит</span></div></div>
+    <div class="prow"><span class="ic">▣</span><div><b>Устройства</b><span>iPhone, Windows, Android TV</span></div></div>
+    <div class="prow"><span class="ic">✦</span><div><b>Пригласить друга</b><span>+7 дней вам и другу</span></div></div>
+    <div class="prow"><span class="ic">✉</span><div><b>Поддержка</b><span>@nugvpn_support · отвечаем быстро</span></div></div>
+  </section>
+
+  <!-- НАВИГАЦИЯ -->
+  <nav class="nav" aria-label="Разделы">
+    <button class="act" data-nav="s-home">
+      <svg viewBox="0 0 24 24"><path d="M3 11 12 4l9 7v8a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1Z"/></svg>
+      Главная</button>
+    <button data-nav="s-plans">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 2.5"/></svg>
+      Тарифы</button>
+    <button data-nav="s-setup">
+      <svg viewBox="0 0 24 24"><path d="M10 13a4 4 0 0 1 0-6l2-2a4 4 0 0 1 6 6l-1.5 1.5"/><path d="M14 11a4 4 0 0 1 0 6l-2 2a4 4 0 0 1-6-6L7.5 11.5"/></svg>
+      Связь</button>
+    <button data-nav="s-profile">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-3.5 4.5-5 8-5s6.5 1.5 8 5"/></svg>
+      Профиль</button>
+  </nav>
+
+  <div class="toast" id="toast">Скопировано</div>
+</div>
+
+<script>
+  // интеграция с Telegram, когда страница открыта как Mini App
+  const tg = window.Telegram && window.Telegram.WebApp;
+  if (tg){
+    tg.ready();
+    tg.expand();
+    tg.setBackgroundColor('#0a0d1c');
+    tg.setHeaderColor('#171e3e');
+    const u = tg.initDataUnsafe && tg.initDataUnsafe.user;
+    if (u){
+      document.getElementById('profileSub').textContent =
+        (u.username ? '@' + u.username : u.first_name) + ' · ID ' + u.id;
+    }
+  }
+
+  const screens = document.querySelectorAll('.screen');
+  const tabs = document.querySelectorAll('.nav button');
+  function show(id){
+    screens.forEach(s => s.classList.toggle('on', s.id === id));
+    tabs.forEach(t => t.classList.toggle('act', t.dataset.nav === id));
+  }
+  tabs.forEach(t => t.addEventListener('click', () => show(t.dataset.nav)));
+  document.querySelectorAll('[data-go]').forEach(b =>
+    b.addEventListener('click', () => show(b.dataset.go)));
+
+  const plans = document.querySelectorAll('[data-plan]');
+  const payPrice = document.getElementById('payPrice');
+  plans.forEach(p => p.addEventListener('click', () => {
+    plans.forEach(x => x.classList.remove('pick'));
+    p.classList.add('pick');
+    payPrice.textContent = p.querySelector('.cost').textContent;
+  }));
+
+  const toast = document.getElementById('toast');
+  function pop(msg){
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(pop.t);
+    pop.t = setTimeout(() => toast.classList.remove('show'), 1800);
+  }
+  document.getElementById('payBtn').addEventListener('click', () => pop('Оплата скоро заработает'));
+  document.getElementById('copyBtn').addEventListener('click', async () => {
+    const text = document.getElementById('subLink').textContent.trim();
+    try { await navigator.clipboard.writeText(text); pop('Скопировано'); }
+    catch { pop('Выделите и скопируйте вручную'); }
+  });
+  document.querySelectorAll('.prow').forEach(r =>
+    r.addEventListener('click', () => pop('Скоро заработает')));
+
+  // живое звёздное небо
+  (function(){
+    const cv = document.getElementById('stars');
+    const ctx = cv.getContext('2d');
+    let W = cv.clientWidth || 390, H = cv.clientHeight || 660;
+    const DPR = Math.min(window.devicePixelRatio || 1, 2);
+    function resize(){
+      W = cv.clientWidth; H = cv.clientHeight;
+      cv.width = W * DPR; cv.height = H * DPR;
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    const N = 64;
+    const stars = Array.from({length: N}, () => ({
+      x: Math.random(), y: Math.random(),
+      r: .5 + Math.random() * 1.1,
+      p: Math.random() * Math.PI * 2,
+      s: .4 + Math.random() * 1.1,
+      vy: .00003 + Math.random() * .00008,
+      hue: Math.random() < .25 ? '140,230,210' : '170,182,255'
+    }));
+
+    let shoot = null;
+    function spawnShoot(){
+      shoot = { x: .15 + Math.random() * .6, y: .05 + Math.random() * .2,
+                vx: 2.6 + Math.random() * 1.6, vy: 1.1 + Math.random() * .7, life: 1 };
+    }
+
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function draw(t){
+      ctx.clearRect(0, 0, W, H);
+      for (const st of stars){
+        const tw = reduced ? .7 : .45 + .55 * Math.abs(Math.sin(st.p + t * .001 * st.s));
+        ctx.beginPath();
+        ctx.arc(st.x * W, st.y * H, st.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${st.hue},${(tw * .85).toFixed(3)})`;
+        ctx.fill();
+        if (!reduced){
+          st.y -= st.vy;
+          if (st.y < -0.01){ st.y = 1.01; st.x = Math.random(); }
+        }
+      }
+      if (!reduced && shoot){
+        const s = shoot, sx = s.x * W, sy = s.y * H;
+        ctx.strokeStyle = `rgba(190,210,255,${s.life.toFixed(3)})`;
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(sx - s.vx * 9, sy - s.vy * 9);
+        ctx.stroke();
+        s.x += s.vx / W; s.y += s.vy / H; s.life -= .022;
+        if (s.life <= 0) shoot = null;
+      }
+      if (!reduced) requestAnimationFrame(draw);
+    }
+
+    if (reduced){ draw(0); }
+    else {
+      requestAnimationFrame(draw);
+      setInterval(() => { if (!shoot && Math.random() < .5) spawnShoot(); }, 5000);
+    }
+  })();
+</script>
+</body>
+</html>
